@@ -1,0 +1,2 @@
+# Always LF in the working copy, also on Windows: files end up in Linux containers.
+* text=auto eol=lf

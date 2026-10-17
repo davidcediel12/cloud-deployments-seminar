@@ -1,0 +1,28 @@
+# Instructor / assistant notes (not student material)
+HANDOVER.md
+CLAUDE.md
+
+# Node / Vite
+node_modules/
+web/dist/
+
+# Go
+api/api
+api/*.exe
+
+# Secrets and local config: never commit these
+.env
+.env.*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
