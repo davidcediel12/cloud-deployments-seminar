@@ -69,13 +69,13 @@ Without Docker (optional): `cd api && go run .` and `cd web && npm ci && npm run
 2. **Build and run (4 min):**
    ```bash
    docker build -t api ./api
-   docker run --rm -p 8080:8080 api
+   docker run --rm -p 8080:8080 api   # --rm: delete the container when it stops · -p host:container port
    ```
    ✅ The terminal shows a JSON log line `"msg":"starting API"`.
 3. **Try it (4 min):** open http://localhost:8080/api/message (Codespaces: **Ports** tab → 8080). Stop it (Ctrl+C) and
    inject config from outside:
    ```bash
-   docker run --rm -p 8080:8080 -e APP_MESSAGE="Hi from my container" api
+   docker run --rm -p 8080:8080 -e APP_MESSAGE="Hi from my container" api   # -e: set an environment variable
    ```
    ✅ The message changed: same image, different config.
 
