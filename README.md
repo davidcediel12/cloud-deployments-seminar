@@ -50,19 +50,31 @@ Jump to a step: `git stash` (puts your edits aside; `git stash pop` brings them 
 
 ## 3. The app
 
-**API** (`api/`, Go standard library): `GET /api/message` → `{"message":"<APP_MESSAGE>"}`.
+**API** (`api/`, Go + Postgres driver `pgx`):
+
+| Endpoint | Does |
+|---|---|
+| `GET /api/message` | `{"message":"<APP_MESSAGE>"}` |
+| `GET /api/notes` | List of notes, newest first |
+| `POST /api/notes` | Adds a note: `{"text":"..."}` |
 
 | Env variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `8080` | Port to listen on |
 | `APP_MESSAGE` | `Hello from the API` | Text returned by `/api/message` |
 | `CORS_ORIGIN` | `http://localhost:5173` | Frontend origin allowed to call the API (in the cloud: the frontend's URL) |
+| `DB_URL` | (required) | Postgres connection string: `postgres://user:password@host:5432/db` |
 
-**Frontend** (`web/`, React + Vite): shows the API's message. The API URL is read at runtime from `public/config.js`
-(`dist/config.js` after building), so the same build works against any API.
+**Frontend** (`web/`, React + Vite): shows the API's message and the notes. The API URL is read at runtime from
+`public/config.js` (`dist/config.js` after building), so the same build works against any API.
 
-Without Docker (optional): in `api/` run `PORT=8081 go run .` (PowerShell: `$env:PORT=8081; go run .`), and in `web/` run
-`npm ci && npm run dev`.
+**Run everything** (from `step-2-compose-db` on):
+
+```bash
+docker compose up --build    # API on :8081, web on http://localhost:3000, Postgres inside
+docker compose down          # stop; notes are kept in the "dbdata" volume
+docker compose down -v       # stop and delete the volume: notes are gone
+```
 
 ## 4. Hands-on 1: containerize the API (15 min)
 
