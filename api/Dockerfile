@@ -5,8 +5,8 @@
 FROM golang:1.26 AS build
 WORKDIR /src
 
-# Dependencies first: this layer is cached until go.mod changes.
-COPY go.mod ./
+# Dependencies first: this layer is cached until go.mod/go.sum change.
+COPY go.mod go.sum ./
 RUN go mod download
 
 # Then the code, which changes often.

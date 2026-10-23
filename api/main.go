@@ -1,13 +1,15 @@
-// A tiny HTTP API for the seminar. Standard library only.
+// A tiny HTTP API for the seminar. Standard library + pgx (Postgres driver).
 //
 // Configuration comes from environment variables (12-factor):
 //
 //	PORT         port to listen on (default 8080)
 //	APP_MESSAGE  text returned by GET /api/message
 //	CORS_ORIGIN  frontend origin allowed to call the API (default http://localhost:5173)
+//	DB_URL       Postgres connection string (required), e.g. postgres://user:pass@host:5432/db
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -24,11 +26,25 @@ func main() {
 	message := getEnv("APP_MESSAGE", "Hello from the API")
 	corsOrigin := getEnv("CORS_ORIGIN", "http://localhost:5173")
 
+	// The database URL contains a password: required, never logged, never hardcoded.
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		slog.Error("DB_URL is required")
+		os.Exit(1)
+	}
+	notes, err := NewNoteStore(context.Background(), dbURL)
+	if err != nil {
+		slog.Error("cannot connect to the database", "error", err)
+		os.Exit(1)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/message", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"message": message})
 	})
+	mux.HandleFunc("GET /api/notes", notes.list)
+	mux.HandleFunc("POST /api/notes", notes.create)
 
 	handler := logRequests(cors(corsOrigin, mux))
 
