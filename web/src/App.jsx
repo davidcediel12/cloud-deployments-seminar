@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Notes from "./Notes.jsx";
 
 // Set in public/config.js at runtime (see index.html).
 const API_URL = window.APP_CONFIG?.apiUrl ?? "http://localhost:8081";
@@ -42,6 +43,8 @@ export default function App() {
         )}
         {!message && !error && <p className="muted">Loading…</p>}
       </section>
+
+      <Notes apiUrl={API_URL} />
     </main>
   );
 }
