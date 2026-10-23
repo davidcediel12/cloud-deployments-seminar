@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // Set in public/config.js at runtime (see index.html).
-const API_URL = window.APP_CONFIG?.apiUrl ?? "http://localhost:8080";
+const API_URL = window.APP_CONFIG?.apiUrl ?? "http://localhost:8081";
 
 export default function App() {
   const [message, setMessage] = useState(null);
