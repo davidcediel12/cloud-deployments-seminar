@@ -61,7 +61,8 @@ Jump to a step: `git stash` (puts your edits aside; `git stash pop` brings them 
 **Frontend** (`web/`, React + Vite): shows the API's message. The API URL is read at runtime from `public/config.js`
 (`dist/config.js` after building), so the same build works against any API.
 
-Without Docker (optional): `cd api && go run .` and `cd web && npm ci && npm run dev`.
+Without Docker (optional): in `api/` run `PORT=8081 go run .` (PowerShell: `$env:PORT=8081; go run .`), and in `web/` run
+`npm ci && npm run dev`.
 
 ## 4. Hands-on 1: containerize the API (15 min)
 
@@ -69,15 +70,15 @@ Without Docker (optional): `cd api && go run .` and `cd web && npm ci && npm run
 2. **Build and run (4 min):**
    ```bash
    docker build -t api ./api
-   docker run --rm -p 8080:8080 api   # --rm: delete the container when it stops · -p host:container port
+   docker run --rm -p 8081:8080 api   # --rm: delete the container when it stops · -p host port:container port
    ```
    ✅ The terminal shows a JSON log line `"msg":"starting API"`.
-   Error `port is already allocated` or `bind: Only one usage of each socket address`? Another program uses 8080 on
-   your machine: change only the host side, e.g. `-p 8081:8080`, and open http://localhost:8081.
-3. **Try it (4 min):** open http://localhost:8080/api/message (Codespaces: **Ports** tab → 8080). Stop it (Ctrl+C) and
+   Error `port is already allocated` or `bind: Only one usage of each socket address`? Another program uses 8081 on
+   your machine: change only the host side, e.g. `-p 8082:8080`, and use 8082 below.
+3. **Try it (4 min):** open http://localhost:8081/api/message (Codespaces: **Ports** tab → 8081). Stop it (Ctrl+C) and
    inject config from outside:
    ```bash
-   docker run --rm -p 8080:8080 -e APP_MESSAGE="Hi from my container" api   # -e: set an environment variable
+   docker run --rm -p 8081:8080 -e APP_MESSAGE="Hi from my container" api   # -e: set an environment variable
    ```
    ✅ The message changed: same image, different config.
 
@@ -101,7 +102,7 @@ Replace `<you>` with your Docker Hub username.
      environment. Policy error about the region? Pick another: student subscriptions allow only some.
    - **Container:** uncheck *Use quickstart image*; source **Docker Hub or other registries**, type **Public**,
      registry `docker.io`, image `<you>/seminar-api:1.0`.
-   - **Ingress:** enabled, traffic from **anywhere**, target port **8080**.
+   - **Ingress:** enabled, traffic from **anywhere**, target port **8080**: the container port (Azure maps public HTTPS to it, like `-p` does locally).
    - **Review + create.**
 3. **Open it (5 min):** resource → **Overview** → **Application Url** → add `/api/message`.
    ✅ Your API answers on a public HTTPS URL. (The first request can take a few seconds: scale-to-zero cold start.)
