@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -24,25 +23,9 @@ type NoteStore struct {
 	db *pgxpool.Pool
 }
 
-// NewNoteStore connects to Postgres and creates the table if needed.
-func NewNoteStore(ctx context.Context, dbURL string) (*NoteStore, error) {
-	db, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(ctx); err != nil {
-		return nil, err
-	}
-	_, err = db.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS notes (
-			id         BIGSERIAL PRIMARY KEY,
-			text       TEXT NOT NULL,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-		)`)
-	if err != nil {
-		return nil, err
-	}
-	return &NoteStore{db: db}, nil
+// NewNoteStore uses an existing pool; it doesn't open or close it (see db.go).
+func NewNoteStore(db *pgxpool.Pool) *NoteStore {
+	return &NoteStore{db: db}
 }
 
 // GET /api/notes: newest first.

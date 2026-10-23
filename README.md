@@ -37,7 +37,7 @@ options**, branch `step-0-hello-world`. It uses your personal GitHub quota: stop
 | `step-0-hello-world` | The app + a TODO skeleton for `api/Dockerfile` (**start here**) |
 | `step-1-containerized` | Working Dockerfiles for `api` and `web` (**rescue for Hands-on 1**) |
 | `step-2-compose-db` | Notes feature + Postgres, `compose.yaml` to run everything locally |
-| `step-3-k8s` | `/health` endpoint + Kubernetes YAML (Deployment with probes, Service, Secret) |
+| `step-3-k8s` | `/livez` + `/readyz` and graceful shutdown + Kubernetes YAML (Deployment with probes, Service, Secret) |
 | `step-4-terraform` | Terraform for the frontend's storage account (static website) |
 | `step-5-github-actions` | CI/CD workflows for `web` and `api` |
 | `main` | Final state (same as step 5) |
@@ -57,6 +57,8 @@ Jump to a step: `git stash` (puts your edits aside; `git stash pop` brings them 
 | `GET /api/message` | `{"message":"<APP_MESSAGE>"}` |
 | `GET /api/notes` | List of notes, newest first |
 | `POST /api/notes` | Adds a note: `{"text":"..."}` |
+| `GET /livez` | Liveness probe: 200 while the process runs |
+| `GET /readyz` | Readiness probe: 200, or 503 while shutting down |
 
 | Env variable | Default | Meaning |
 |---|---|---|
