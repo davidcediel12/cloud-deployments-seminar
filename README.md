@@ -72,6 +72,8 @@ Without Docker (optional): `cd api && go run .` and `cd web && npm ci && npm run
    docker run --rm -p 8080:8080 api   # --rm: delete the container when it stops · -p host:container port
    ```
    ✅ The terminal shows a JSON log line `"msg":"starting API"`.
+   Error `port is already allocated` or `bind: Only one usage of each socket address`? Another program uses 8080 on
+   your machine: change only the host side, e.g. `-p 8081:8080`, and open http://localhost:8081.
 3. **Try it (4 min):** open http://localhost:8080/api/message (Codespaces: **Ports** tab → 8080). Stop it (Ctrl+C) and
    inject config from outside:
    ```bash
