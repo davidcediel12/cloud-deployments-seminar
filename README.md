@@ -165,6 +165,8 @@ kubectl get svc api         # EXTERNAL-IP: the public IP (Docker Desktop: use lo
   go run ./tools/load/main.go -url http://<EXTERNAL-IP>:8081/api/message -c 40 -d 2m
   ```
   CPU goes above the 20% target and pods are added (up to 4); a minute after the load stops it goes back to 2.
+  The load generator is optional and needs Go (Codespaces has it). Without it the autoscaler still runs: it keeps
+  2 pods and `kubectl get hpa api` shows the current CPU against the target.
   The autoscaler reads CPU from **metrics-server**: AKS has it. **Docker Desktop only** (`kubectl top pods` says
   "Metrics API not available"): install it once. Without it nothing breaks, the API just stays at 2 pods.
   ```bash
