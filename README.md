@@ -134,8 +134,8 @@ Replace `<you>` with your Docker Hub username.
 
 ## 6. Kubernetes (from `step-3-k8s`, bonus reference)
 
-The API on a Kubernetes cluster: `k8s/api.yaml` (Deployment with 2 pods and probes, LoadBalancer Service) and a
-Secret with the database URL.
+The API on a Kubernetes cluster: `k8s/api.yaml` (Deployment with probes, LoadBalancer Service), `k8s/hpa.yaml`
+(autoscaling between 2 and 4 pods) and a Secret with the database URL.
 
 **You need:**
 - **A cluster:** locally Docker Desktop (**Settings → Kubernetes → Enable Kubernetes**), or AKS in the portal
@@ -149,8 +149,7 @@ Secret with the database URL.
 **Deploy:**
 ```bash
 cp k8s/secret.yaml.example k8s/secret.yaml   # fill in the URL; secret.yaml is never committed
-kubectl apply -f k8s/secret.yaml
-kubectl apply -f k8s/api.yaml
+kubectl apply -f k8s/         # secret.yaml, api.yaml, hpa.yaml (the .example file is skipped)
 kubectl get pods            # wait for 2 pods READY 1/1
 kubectl get svc api         # EXTERNAL-IP: the public IP (Docker Desktop: use localhost)
 ```
@@ -159,7 +158,21 @@ kubectl get svc api         # EXTERNAL-IP: the public IP (Docker Desktop: use lo
 
 **Try:**
 - Self-healing: `kubectl delete pod <name>`, then `kubectl get pods -w`: a new pod replaces it.
-- Zero-downtime update: `kubectl rollout restart deployment/api` while the API keeps answering.
+- Zero-downtime update: run the load generator (below), then `kubectl rollout restart deployment/api`: 0 errors.
+- Autoscaling: `kubectl get hpa api -w` in one terminal, load in another:
+  ```bash
+  go run ./tools/load/main.go                                   # 20 workers, 60 s, localhost:8081
+  go run ./tools/load/main.go -url http://<EXTERNAL-IP>:8081/api/message -c 40 -d 2m
+  ```
+  CPU goes above the 20% target and pods are added (up to 4); a minute after the load stops it goes back to 2.
+  The autoscaler reads CPU from **metrics-server**: AKS has it. **Docker Desktop only** (`kubectl top pods` says
+  "Metrics API not available"): install it once. Without it nothing breaks, the API just stays at 2 pods.
+  ```bash
+  kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  kubectl patch deployment metrics-server -n kube-system --type=json -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+  ```
+  (The flag skips checking Docker Desktop's self-signed certificate: local only. Windows PowerShell: write each `"`
+  inside the JSON as `\"`, or use Git Bash.)
 - Logs: `kubectl logs -l app=api`.
 
 > ⚠️ The LoadBalancer serves plain **HTTP**. A frontend served over HTTPS (Blob Storage static website) can't call
