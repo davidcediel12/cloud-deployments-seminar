@@ -184,3 +184,37 @@ kubectl get svc api         # EXTERNAL-IP: the public IP (Docker Desktop: use lo
 > doesn't have this problem because it provides HTTPS.
 
 🧹 **When done:** delete the AKS cluster (its node and public IP consume credit).
+
+## 7. Terraform: the frontend's hosting as code (from `step-4-terraform`)
+
+`infra/terraform/` creates a resource group and a storage account with the static website turned on, the same thing
+you would click in the portal. It creates the empty site; uploading the frontend is a separate step (and automated in
+step 5).
+
+**You need:**
+- **Azure CLI**, logged in: [install](https://learn.microsoft.com/cli/azure/install-azure-cli), then `az login`.
+  Terraform uses this login, no extra password.
+- **Terraform**: [install](https://developer.hashicorp.com/terraform/install).
+
+**Create it:**
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # put your subscription ID in it: az account show --query id -o tsv
+terraform init      # download the Azure plugin (once)
+terraform plan      # preview: 4 resources to add, nothing changes yet
+terraform apply     # create them (type "yes"); prints website_url and storage_account_name
+```
+✅ `website_url` opens a "WebContentNotFound" page: the site exists but is still empty.
+Error that the region "is not accepting new customers" or a policy error? Set another `location` in `terraform.tfvars`.
+
+**Upload the frontend** (from the repo root):
+```bash
+npm --prefix web ci
+npm --prefix web run build
+# edit web/dist/config.js: apiUrl = your API's public URL (e.g. the Container App URL)
+az storage blob upload-batch --account-name <storage_account_name> -s web/dist -d '$web' --overwrite
+```
+✅ Reload `website_url`: the app loads. If it can't reach the API, set the API's `CORS_ORIGIN` to `website_url`
+without the trailing `/`.
+
+🧹 **When done:** `terraform destroy` (type "yes") deletes the resource group and everything in it.
