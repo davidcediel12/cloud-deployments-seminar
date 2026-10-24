@@ -1,0 +1,28 @@
+# Autoscaling: Kubernetes adds API pods when they get busy and removes them when load drops.
+# Needs metrics-server in the cluster (AKS has it; check with: kubectl top pods).
+# Watch it: kubectl get hpa api -w
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+spec:
+  scaleTargetRef: # what to scale
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2 # always at least 2, so one pod can fail or restart without downtime
+  maxReplicas: 4 # upper limit: protects the node and the database (each pod opens its own connections)
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # % of the pod's CPU request (50m in api.yaml): 20% = 10m. Low on purpose so a demo scales quickly;
+          # a real app would use something like 60-80%.
+          averageUtilization: 20
+  behavior:
+    scaleDown:
+      # Default is 5 minutes of low load before removing pods (avoids flapping). Shorter for the demo.
+      stabilizationWindowSeconds: 60
