@@ -143,7 +143,7 @@ The API on a Kubernetes cluster: `k8s/api.yaml` (Deployment with probes, LoadBal
   Check where kubectl points before applying: `kubectl config current-context`.
 - **A Postgres the cluster can reach**, e.g. Azure Database for PostgreSQL (allow access from Azure services in
   its networking settings). Create the database first: the API creates its table, not the database.
-- **Your image on Docker Hub:** `docker build -t <you>/seminar-api:3.0 ./api`, `docker push <you>/seminar-api:3.0`,
+- **Your image on Docker Hub:** `docker build -t <you>/seminar-api:3.1 ./api`, `docker push <you>/seminar-api:3.1`,
   and put it in `k8s/api.yaml` (`image:`).
 
 **Deploy:**
