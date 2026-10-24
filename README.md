@@ -138,6 +138,8 @@ The API on a Kubernetes cluster: `k8s/api.yaml` (Deployment with probes, LoadBal
 (autoscaling between 2 and 4 pods) and a Secret with the database URL.
 
 **You need:**
+- **kubectl**, the Kubernetes command line: included in Docker Desktop and Codespaces; otherwise
+  [install it](https://kubernetes.io/docs/tasks/tools/).
 - **A cluster:** locally Docker Desktop (**Settings → Kubernetes → Enable Kubernetes**), or AKS in the portal
   (**Free** tier, 1 node, small VM size), then `az aks get-credentials -g <resource-group> -n <cluster>`.
   Check where kubectl points before applying: `kubectl config current-context`.
