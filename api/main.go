@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -31,7 +32,12 @@ func main() {
 		slog.Error("DB_URL is required")
 		os.Exit(1)
 	}
-	db, err := connectDB(context.Background(), dbURL)
+	// Fail fast with a clear log line instead of hanging when the DB is unreachable
+	// (e.g. a firewall that drops packets): the pod then shows CrashLoopBackOff + this error.
+	slog.Info("connecting to the database")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	db, err := connectDB(ctx, dbURL)
+	cancel()
 	if err != nil {
 		slog.Error("cannot connect to the database", "error", err)
 		os.Exit(1)
