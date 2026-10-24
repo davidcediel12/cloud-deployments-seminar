@@ -23,11 +23,16 @@ func cors(origin string, next http.Handler) http.Handler {
 }
 
 // logRequests writes one log line per request.
+// Successful probe calls are skipped: Kubernetes sends them every few seconds
+// and they would drown the useful lines. Failed probes are still logged.
 func logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
+		if isProbe(r.URL.Path) && rec.status < 400 {
+			return
+		}
 		slog.Info("request",
 			"method", r.Method,
 			"path", r.URL.Path,
@@ -35,6 +40,10 @@ func logRequests(next http.Handler) http.Handler {
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	})
+}
+
+func isProbe(path string) bool {
+	return path == "/livez" || path == "/readyz"
 }
 
 type statusRecorder struct {
