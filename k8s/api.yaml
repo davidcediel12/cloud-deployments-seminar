@@ -78,5 +78,5 @@ spec:
   selector:
     app: api # send traffic to ready pods with this label
   ports:
-    - port: 80 # public port
-      targetPort: http # container port 8080, like -p 80:8080
+    - port: 8081 # public port, the same as locally, so web/public/config.js only needs the host changed
+      targetPort: http # container port 8080, like -p 8081:8080
