@@ -131,3 +131,39 @@ Replace `<you>` with your Docker Hub username.
 🛟 **Rescue:** use the image `davidcediel12/seminar-api:1.0`.
 
 🧹 **When done:** delete the resource group (**Resource groups → rg-seminar → Delete**) to save credit.
+
+## 6. Kubernetes (from `step-3-k8s`, bonus reference)
+
+The API on a Kubernetes cluster: `k8s/api.yaml` (Deployment with 2 pods and probes, LoadBalancer Service) and a
+Secret with the database URL.
+
+**You need:**
+- **A cluster:** locally Docker Desktop (**Settings → Kubernetes → Enable Kubernetes**), or AKS in the portal
+  (**Free** tier, 1 node, small VM size), then `az aks get-credentials -g <resource-group> -n <cluster>`.
+  Check where kubectl points before applying: `kubectl config current-context`.
+- **A Postgres the cluster can reach**, e.g. Azure Database for PostgreSQL (allow access from Azure services in
+  its networking settings). Create the database first: the API creates its table, not the database.
+- **Your image on Docker Hub:** `docker build -t <you>/seminar-api:3.0 ./api`, `docker push <you>/seminar-api:3.0`,
+  and put it in `k8s/api.yaml` (`image:`).
+
+**Deploy:**
+```bash
+cp k8s/secret.yaml.example k8s/secret.yaml   # fill in the URL; secret.yaml is never committed
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/api.yaml
+kubectl get pods            # wait for 2 pods READY 1/1
+kubectl get svc api         # EXTERNAL-IP: the public IP (Docker Desktop: use localhost)
+```
+✅ `http://<EXTERNAL-IP>:8081/api/message` answers. For the frontend, set `apiUrl` in `config.js` to that address and
+`CORS_ORIGIN` in `k8s/api.yaml` to the frontend's URL.
+
+**Try:**
+- Self-healing: `kubectl delete pod <name>`, then `kubectl get pods -w`: a new pod replaces it.
+- Zero-downtime update: `kubectl rollout restart deployment/api` while the API keeps answering.
+- Logs: `kubectl logs -l app=api`.
+
+> ⚠️ The LoadBalancer serves plain **HTTP**. A frontend served over HTTPS (Blob Storage static website) can't call
+> an HTTP API: the browser blocks it ("mixed content"). Show the AKS API directly (browser or curl); Container Apps
+> doesn't have this problem because it provides HTTPS.
+
+🧹 **When done:** delete the AKS cluster (its node and public IP consume credit).
