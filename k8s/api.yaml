@@ -1,0 +1,82 @@
+# The API on Kubernetes: a Deployment (the pods) and a Service (a stable address in front of them).
+# Apply: kubectl apply -f k8s/   (create the Secret first, see secret.example.yaml)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 2 # desired state: Kubernetes keeps 2 pods running and replaces any that die
+  selector:
+    matchLabels:
+      app: api # the pods this Deployment manages
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # never go below 2 ready pods during an update...
+      maxSurge: 1 # ...start one new pod, wait until it's ready, then stop an old one
+  template: # every pod is created from this template
+    metadata:
+      labels:
+        app: api
+    spec:
+      securityContext:
+        runAsNonRoot: true # refuse to start if the image would run as root
+      containers:
+        - name: api
+          image: davidcediel12/seminar-api:3.0 # replace with your image (public, so no pull secret needed)
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: CORS_ORIGIN
+              value: http://localhost:3000 # in the cloud: your frontend's URL (the static website)
+            - name: DB_URL # the password lives in a Secret, not in this file
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: url
+
+          # Liveness: "is the process alive?" Fails 3 times in a row → Kubernetes restarts the container.
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness: "should this pod get traffic?" Fails → the Service stops sending requests here,
+          # but the pod is not restarted. A new pod gets traffic only once this passes.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 1
+
+          # requests: what the scheduler reserves on a node. limits: the container is killed above this memory.
+          resources:
+            requests:
+              cpu: 50m # 5% of one CPU
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # the API writes nothing to disk
+            capabilities:
+              drop: ["ALL"]
+      # On delete/update Kubernetes sends SIGTERM, waits this long, then kills the container.
+      # The API needs ~15s at most (5s drain + 10s shutdown, see api/server.go).
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  type: LoadBalancer # the cloud creates a load balancer with a public IP (EXTERNAL-IP in kubectl get svc)
+  selector:
+    app: api # send traffic to ready pods with this label
+  ports:
+    - port: 80 # public port
+      targetPort: http # container port 8080, like -p 80:8080

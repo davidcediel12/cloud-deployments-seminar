@@ -13,6 +13,7 @@ api/*.exe
 # Secrets and local config: never commit these
 .env
 .env.*
+k8s/secret.yaml
 
 # Terraform
 .terraform/
