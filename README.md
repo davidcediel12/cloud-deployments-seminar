@@ -194,7 +194,7 @@ step 5).
 **You need:**
 - **Azure CLI**, logged in: [install](https://learn.microsoft.com/cli/azure/install-azure-cli), then `az login`.
   Terraform uses this login, no extra password.
-- **Terraform**: [install](https://developer.hashicorp.com/terraform/install).
+- **Terraform**: [install](https://developer.hashicorp.com/terraform/install). Codespaces has both preinstalled (still run `az login`).
 
 **Create it:**
 ```bash
