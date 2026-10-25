@@ -4,6 +4,7 @@
 //
 //	PORT         port to listen on (default 8080)
 //	APP_MESSAGE  text returned by GET /api/message
+//	APP_VERSION  version returned by GET /api/message (set in the image by CI: the commit SHA)
 //	CORS_ORIGIN  frontend origin allowed to call the API (default http://localhost:5173)
 //	DB_URL       Postgres connection string (required), e.g. postgres://user:pass@host:5432/db
 package main
@@ -24,6 +25,7 @@ func main() {
 
 	port := getEnv("PORT", "8080")
 	message := getEnv("APP_MESSAGE", "Hello from the API")
+	version := getEnv("APP_VERSION", "dev")
 	corsOrigin := getEnv("CORS_ORIGIN", "http://localhost:5173")
 
 	// The database URL contains a password: required, never logged, never hardcoded.
@@ -49,7 +51,7 @@ func main() {
 	mux.HandleFunc("GET /livez", h.livez)
 	mux.HandleFunc("GET /readyz", h.readyz)
 	mux.HandleFunc("GET /api/message", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"message": message})
+		writeJSON(w, http.StatusOK, map[string]string{"message": message, "version": version})
 	})
 	mux.HandleFunc("GET /api/notes", notes.list)
 	mux.HandleFunc("POST /api/notes", notes.create)

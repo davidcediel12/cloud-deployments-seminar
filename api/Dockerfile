@@ -19,5 +19,8 @@ RUN CGO_ENABLED=0 go build -o /bin/api .
 # No compiler, no shell, runs as a non-root user.
 FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /bin/api /api
+# Which code is this? CI passes the commit SHA (--build-arg VERSION=...); shown in /api/message.
+ARG VERSION=dev
+ENV APP_VERSION=$VERSION
 EXPOSE 8080
 ENTRYPOINT ["/api"]

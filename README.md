@@ -54,7 +54,7 @@ Jump to a step: `git stash` (puts your edits aside; `git stash pop` brings them 
 
 | Endpoint | Does |
 |---|---|
-| `GET /api/message` | `{"message":"<APP_MESSAGE>"}` |
+| `GET /api/message` | `{"message":"<APP_MESSAGE>","version":"<APP_VERSION>"}` |
 | `GET /api/notes` | List of notes, newest first |
 | `POST /api/notes` | Adds a note: `{"text":"..."}` |
 | `GET /livez` | Liveness probe: 200 while the process runs |
@@ -64,6 +64,7 @@ Jump to a step: `git stash` (puts your edits aside; `git stash pop` brings them 
 |---|---|---|
 | `PORT` | `8080` | Port to listen on |
 | `APP_MESSAGE` | `Hello from the API` | Text returned by `/api/message` |
+| `APP_VERSION` | `dev` | Version shown by `/api/message`; CI sets it in the image to the commit SHA |
 | `CORS_ORIGIN` | `http://localhost:5173` | Frontend origin allowed to call the API (in the cloud: the frontend's URL) |
 | `DB_URL` | (required) | Postgres connection string: `postgres://user:password@host:5432/db` |
 
