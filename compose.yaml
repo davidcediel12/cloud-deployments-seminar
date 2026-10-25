@@ -23,14 +23,31 @@ services:
     environment:
       DB_URL: postgres://notes_user:dev_password@db:5432/notes # user:password@host:port/database
       CORS_ORIGIN: http://localhost:3000 # the web service below, as the browser sees it
+      # Telemetry (see api/telemetry.go): send traces, metrics and logs to the lgtm service.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318 # OTLP over HTTP
+      OTEL_SERVICE_NAME: seminar-api # the name you pick in Grafana
+      OTEL_METRIC_EXPORT_INTERVAL: "5000" # every 5 s (default 60 s: too slow for a demo)
     depends_on:
       db:
         condition: service_healthy # start only when Postgres accepts connections
+      lgtm:
+        condition: service_started
 
   web:
     build: ./web
     ports:
       - "3000:8080"
+
+  # Grafana's all-in-one demo image: an OpenTelemetry collector plus Loki (logs),
+  # Tempo (traces), Prometheus (metrics) and Grafana, preconfigured. Not for production.
+  lgtm:
+    image: grafana/otel-lgtm:0.38.0
+    ports:
+      - "3001:3000" # Grafana on http://localhost:3001 (3000 is the web app)
+    volumes:
+      # Dashboards as code: Grafana loads observability/grafana/*.json at startup.
+      - ./observability/grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/seminar.yaml:ro
+      - ./observability/grafana:/otel-lgtm/seminar-dashboards:ro
 
 volumes:
   dbdata:

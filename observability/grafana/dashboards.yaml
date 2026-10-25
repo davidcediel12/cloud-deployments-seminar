@@ -1,0 +1,11 @@
+# Grafana "provisioning": load dashboards from files at startup (dashboards as code).
+# Mounted into the lgtm container by compose.yaml.
+# After editing seminar-api.json: docker compose restart lgtm (Grafana reads it at startup).
+apiVersion: 1
+
+providers:
+  - name: seminar
+    type: file
+    allowUiUpdates: true # you can edit in the UI; to keep a change, export the JSON over seminar-api.json
+    options:
+      path: /otel-lgtm/seminar-dashboards
