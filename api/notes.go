@@ -9,7 +9,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
+
+// notesCreated is a custom (business) metric, next to the automatic HTTP ones.
+// Prometheus stores it as notes_created_total. Without telemetry it does nothing.
+var notesCreated, _ = otel.Meter("seminar-api").Int64Counter("notes.created",
+	metric.WithDescription("Notes created"))
 
 // Note is one row of the notes table.
 type Note struct {
@@ -95,6 +102,7 @@ func (s *NoteStore) create(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
+	notesCreated.Add(r.Context(), 1)
 	writeJSON(w, http.StatusCreated, n)
 }
 

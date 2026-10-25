@@ -6,6 +6,8 @@
 //	APP_MESSAGE  text returned by GET /api/message
 //	CORS_ORIGIN  frontend origin allowed to call the API (default http://localhost:5173)
 //	DB_URL       Postgres connection string (required), e.g. postgres://user:pass@host:5432/db
+//
+// Plus the OTEL_* variables in telemetry.go (optional: traces, metrics, logs to Grafana).
 package main
 
 import (
@@ -15,12 +17,19 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
 	// Logs go to stdout as JSON: the platform (Docker, Azure) collects them.
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
+
+	if err := setupTelemetry(context.Background()); err != nil {
+		slog.Error("cannot start telemetry", "error", err)
+		os.Exit(1)
+	}
 
 	port := getEnv("PORT", "8080")
 	message := getEnv("APP_MESSAGE", "Hello from the API")
@@ -46,7 +55,9 @@ func main() {
 	mux.HandleFunc("GET /api/notes", notes.list)
 	mux.HandleFunc("POST /api/notes", notes.create)
 
-	handler := logRequests(cors(corsOrigin, mux))
+	// otelhttp goes outermost: it starts the request's span (trace) and records
+	// request metrics; the handlers inside see the span in r.Context().
+	handler := otelhttp.NewHandler(logRequests(cors(corsOrigin, mux)), "http-server")
 
 	slog.Info("starting API", "port", port, "cors_origin", corsOrigin)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
@@ -77,7 +88,8 @@ func logRequests(next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
-		slog.Info("request",
+		// InfoContext: the log line carries the request's trace ID (links logs to traces in Grafana).
+		slog.InfoContext(r.Context(), "request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rec.status,
