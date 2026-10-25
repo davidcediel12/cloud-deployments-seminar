@@ -129,3 +129,39 @@ Replace `<you>` with your Docker Hub username.
 🛟 **Rescue:** use the image `davidcediel12/seminar-api:1.0`.
 
 🧹 **When done:** delete the resource group (**Resource groups → rg-seminar → Delete**) to save credit.
+
+## 6. Observability: logs, metrics, traces (from `extra-observability`, local demo)
+
+The API sends its telemetry with **OpenTelemetry** (`api/telemetry.go`) to Grafana's all-in-one
+[`grafana/otel-lgtm`](https://github.com/grafana/docker-otel-lgtm) container: an OpenTelemetry collector plus
+**L**oki (logs), **G**rafana, **T**empo (traces) and **M**etrics (Prometheus). Demo setup, not for production.
+
+```bash
+git switch extra-observability
+docker pull grafana/otel-lgtm:0.38.0   # 2.75 GB: do it before the demo
+docker compose up --build              # API :8081, web :3000, Grafana http://localhost:3001 (no login)
+```
+
+Use the app at http://localhost:3000 (add a few notes), then in Grafana open **Dashboards → Seminar API**:
+
+| Panel | Shows | Comes from |
+|---|---|---|
+| Requests / responses / latency | Rate per route, per status code, p50/p95 | `otelhttp` middleware: automatic for every request |
+| Notes created | Custom counter | `notesCreated.Add(...)` in `api/notes.go` |
+| Logs | One line per request | `slog`, sent to Loki with the request's `trace_id` |
+| Recent traces | Click a trace ID: the request and its SQL query (`query INSERT`) below it | `otelhttp` + `otelpgx` |
+
+- **Logs → traces:** expand a log line; its `trace_id` belongs to one request, which you can open in Tempo.
+- **Your own queries:** **Explore → Prometheus**, e.g.
+  `sum by (http_route) (rate(http_server_request_duration_seconds_count[1m]))`.
+- **Config** is the standard `OTEL_*` variables in `compose.yaml` (`OTEL_EXPORTER_OTLP_ENDPOINT`,
+  `OTEL_SERVICE_NAME`). Without `OTEL_EXPORTER_OTLP_ENDPOINT` the API runs as before, without telemetry.
+- **Dashboard as code:** `observability/grafana/seminar-api.json`. Changed it in the UI and want to keep it?
+  **Export → JSON** over that file, then `docker compose restart lgtm` (Grafana reads it at startup).
+
+Gotchas:
+
+- New traces take up to ~30 s to appear in search; metrics and logs within ~5 s.
+- Telemetry data lives in the container: `docker compose down` deletes it (the dashboard comes back on the next start).
+- Dashboard empty although the app works, or `port is already allocated` on 8081? Another API answers on 8081
+  (e.g. the Kubernetes one from step 3, without telemetry): stop it first.
