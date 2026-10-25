@@ -1,0 +1,84 @@
+# CI/CD for the frontend: build the static files (CI) and upload them to the Azure static website (CD).
+# Setup (Azure login, variables): see the README, section 8.
+
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/deploy-web.yml"] # only when the frontend changes
+  pull_request: # build only: checks the change builds, deploys nothing
+    paths: ["web/**"]
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read
+  id-token: write # lets azure/login get a short-lived token (OIDC): no Azure password stored in GitHub
+
+concurrency: # one deploy at a time; a newer run waits for the current one
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm # reuse downloaded packages between runs
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build # Vite → web/dist
+      - name: Keep the build for the deploy job
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: web/dist
+
+  deploy:
+    needs: build # runs only if the build succeeded
+    # Skipped until the Azure variables are set, so the workflow doesn't fail before setup.
+    if: github.event_name != 'pull_request' && vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    env:
+      STORAGE_ACCOUNT_NAME: ${{ vars.STORAGE_ACCOUNT_NAME }}
+      API_URL: ${{ vars.API_URL }}
+    steps:
+      - name: Check the settings
+        env:
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          missing=0
+          for name in AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID STORAGE_ACCOUNT_NAME API_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Variable $name is not set (Settings → Secrets and variables → Actions → Variables)"
+              missing=1
+            fi
+          done
+          exit $missing
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      # Same build for every environment; only this file changes (see web/public/config.js).
+      - name: Point the frontend to the API
+        run: |
+          echo "window.APP_CONFIG = { apiUrl: \"$API_URL\" };" > dist/config.js
+          cat dist/config.js
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Upload to the static website
+        # --auth-mode key: az fetches the storage key with the identity's Contributor role.
+        # Files from older builds stay but are no longer referenced by index.html.
+        run: az storage blob upload-batch --account-name "$STORAGE_ACCOUNT_NAME" --source dist --destination '$web' --overwrite --auth-mode key
