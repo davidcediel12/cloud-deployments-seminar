@@ -219,3 +219,67 @@ az storage blob upload-batch --account-name <storage_account_name> -s web/dist -
 without the trailing `/`.
 
 🧹 **When done:** `terraform destroy` (type "yes") deletes the resource group and everything in it.
+
+## 8. CI/CD with GitHub Actions (from `step-5-github-actions`)
+
+Two workflows in `.github/workflows/` run on every push to `main`:
+
+| Workflow | When | Does |
+|---|---|---|
+| `api` | `api/` changed | Builds the image, pushes `<you>/seminar-api:<commit>` to Docker Hub, updates the Container App |
+| `web` | `web/` changed | Builds the frontend, writes `config.js` with the API URL, uploads it to the static website |
+
+Pull requests only build (nothing is deployed). Run a workflow by hand: **Actions → api / web → Run workflow**.
+
+Workflows run in the repo you push to, so do this in **your own repo**.
+
+**You need:** the Container App from Hands-on 2 (with `DB_URL` and `CORS_ORIGIN` set) and the static website from
+section 7.
+
+**1. Docker Hub token:** hub.docker.com → **Account settings → Personal access tokens → Generate**, access
+*Read & Write*. Copy it (it's shown once).
+
+**2. An Azure identity for the pipeline**, with no password: Azure trusts GitHub directly (OIDC). Replace the `<...>`:
+```bash
+az identity create -g <api-resource-group> -n id-github-deploy          # note the "clientId" and "principalId"
+
+az identity federated-credential create -g <api-resource-group> --identity-name id-github-deploy -n github-main \
+  --issuer https://token.actions.githubusercontent.com --audiences api://AzureADTokenExchange \
+  --subject "repo:<user>@<user-id>/<repo>@<repo-id>:ref:refs/heads/main"
+
+# Allow it to change the two resource groups (API and frontend), nothing else:
+az role assignment create --role Contributor --assignee-object-id <principalId> --assignee-principal-type ServicePrincipal \
+  --scope /subscriptions/<subscription-id>/resourceGroups/<api-resource-group>
+az role assignment create --role Contributor --assignee-object-id <principalId> --assignee-principal-type ServicePrincipal \
+  --scope /subscriptions/<subscription-id>/resourceGroups/<web-resource-group>
+```
+The `--subject` must match exactly. `<user-id>` and `<repo-id>` are numbers: open
+`https://api.github.com/repos/<user>/<repo>` and copy `owner.id` and `id`. (Many tutorials show the older form
+without the IDs; it doesn't match anymore.)
+
+**3. Settings in GitHub:** your repo → **Settings → Secrets and variables → Actions**.
+
+| Tab | Name | Value |
+|---|---|---|
+| Secrets | `DOCKERHUB_TOKEN` | the token from step 1 |
+| Variables | `DOCKERHUB_USERNAME` | your Docker Hub user |
+| Variables | `AZURE_CLIENT_ID` | `clientId` from step 2 |
+| Variables | `AZURE_TENANT_ID` | `az account show --query tenantId -o tsv` |
+| Variables | `AZURE_SUBSCRIPTION_ID` | `az account show --query id -o tsv` |
+| Variables | `AZURE_RESOURCE_GROUP` | the API's resource group |
+| Variables | `CONTAINER_APP_NAME` | e.g. `seminar-api` |
+| Variables | `STORAGE_ACCOUNT_NAME` | `storage_account_name` from Terraform |
+| Variables | `API_URL` | the Container App URL, without the trailing `/` |
+
+**4. Try it:** change something in `api/` (or use **Run workflow**) and push to `main`.
+✅ In **Actions**, `build` then `deploy` turn green, and `<API URL>/api/message` shows `"version"`: the commit you
+just pushed.
+
+**If it fails:**
+- `Variable ... is not set`: add it on the **Variables** tab (exact name, not a secret).
+- `AADSTS700213: No matching federated identity record`: the subject in step 2 doesn't match. The error shows the
+  subject GitHub sent: create the credential with exactly that text.
+- `AuthorizationFailed`: the role assignment is missing or still propagating (wait a minute, then **Re-run jobs**).
+
+⭐ **AKS:** CI deploys only to Container Apps. To run the same image on AKS, put the tag in `k8s/api.yaml`
+(`image: <you>/seminar-api:<commit>`) and `kubectl apply -f k8s/`: build once, deploy anywhere.
