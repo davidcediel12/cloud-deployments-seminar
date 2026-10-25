@@ -3,6 +3,7 @@ module github.com/davidcediel12/cloud-deployments-seminar/api
 go 1.26.0
 
 require (
+	github.com/exaring/otelpgx v0.13.0
 	github.com/jackc/pgx/v5 v5.11.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0

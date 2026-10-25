@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -33,7 +34,15 @@ type NoteStore struct {
 
 // NewNoteStore connects to Postgres and creates the table if needed.
 func NewNoteStore(ctx context.Context, dbURL string) (*NoteStore, error) {
-	db, err := pgxpool.New(ctx, dbURL)
+	cfg, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		return nil, err
+	}
+	// One span per SQL query ("query SELECT"), as a child of the request's span. The first time a
+	// query runs, pgx also prepares it on the server: an extra "prepare SELECT" span.
+	// The acquire tracer is off: it adds a "wait for a connection" span per query.
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithDisableAcquireTracer(), otelpgx.WithQuerySpanNamePrefix())
+	db, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
