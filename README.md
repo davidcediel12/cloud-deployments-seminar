@@ -97,7 +97,11 @@ Replace `<you>` with your Docker Hub username.
    docker push <you>/seminar-api:1.0
    ```
    ✅ The image is on hub.docker.com (public by default, so Azure can pull it).
+   Apple-silicon Mac (M1 and later)? Add `--platform linux/amd64` to `docker build`: Azure runs Intel/AMD machines,
+   and an ARM image fails there.
 2. **Create the Container App in the Azure Portal (10 min):** search **Container Apps** → **Create**.
+   The portal may offer a newer **express** mode with fewer settings: either works, pick what you prefer. The steps
+   below follow the classic form.
    - **Basics:** your subscription, new resource group `rg-seminar`, name `seminar-api`, a region, new Container Apps
      environment. Policy error about the region? Pick another: student subscriptions allow only some.
    - **Container:** uncheck *Use quickstart image*; source **Docker Hub or other registries**, type **Public**,
@@ -108,6 +112,7 @@ Replace `<you>` with your Docker Hub username.
    ✅ Your API answers on a public HTTPS URL. (The first request can take a few seconds: scale-to-zero cold start.)
 
 ⭐ **Stretch:** **Containers** → edit → add env var `APP_MESSAGE` → save → a new **revision** → reload.
+(Express mode keeps a single revision: the change still shows up after reload.)
 
 🛟 **Rescue:** use the image `davidcediel12/seminar-api:1.0`.
 
