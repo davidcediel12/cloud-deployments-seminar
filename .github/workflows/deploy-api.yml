@@ -51,6 +51,21 @@ jobs:
     if: github.event_name != 'pull_request' && vars.DOCKERHUB_USERNAME != '' && vars.AZURE_CLIENT_ID != ''
     runs-on: ubuntu-latest
     steps:
+      - name: Check the settings
+        env:
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          CONTAINER_APP_NAME: ${{ vars.CONTAINER_APP_NAME }}
+        run: |
+          missing=0
+          for name in AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP CONTAINER_APP_NAME; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Variable $name is not set (Settings → Secrets and variables → Actions → Variables)"
+              missing=1
+            fi
+          done
+          exit $missing
       - name: Log in to Azure (OIDC)
         uses: azure/login@v3
         with:
