@@ -51,7 +51,7 @@ func main() {
 	mux.HandleFunc("GET /livez", h.livez)
 	mux.HandleFunc("GET /readyz", h.readyz)
 	mux.HandleFunc("GET /api/message", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"message": message + " this is a new change", "version": version})
+		writeJSON(w, http.StatusOK, map[string]string{"message": message + " this is a new change and this is a new one", "version": version})
 	})
 	mux.HandleFunc("GET /api/notes", notes.list)
 	mux.HandleFunc("POST /api/notes", notes.create)
